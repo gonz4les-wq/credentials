@@ -56,7 +56,13 @@
       else if (k.dataset.d != null) add(k.dataset.d);
     });
     const keyHandler = (e) => {
-      if (!host.isConnected || host.offsetParent === null) return;
+      // Never steal keys when the user is typing into a form control —
+      // otherwise digits and Backspace in the edit form / search get eaten
+      // by an inactive PIN screen's listener.
+      const t = e.target;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+      // Only act when this PIN actually lives inside a currently-visible screen/modal.
+      if (!host.closest('.screen.active, .modal:not([hidden])')) return;
       if (/^[0-9]$/.test(e.key)) { add(e.key); e.preventDefault(); }
       else if (e.key === 'Backspace') { back(); e.preventDefault(); }
     };
