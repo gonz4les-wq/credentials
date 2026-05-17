@@ -12,11 +12,11 @@
 <meta name="format-detection" content="telephone=no" />
 <meta name="referrer" content="no-referrer" />
 <title>Credentials</title>
-<link rel="manifest" href="manifest.webmanifest?v=4" />
+<link rel="manifest" href="manifest.webmanifest?v=5" />
 <link rel="icon" href="icon.svg" type="image/svg+xml" />
 <link rel="apple-touch-icon" href="icon-192.png" />
 <link rel="apple-touch-icon" sizes="512x512" href="icon-512.png" />
-<link rel="stylesheet" href="styles.css?v=4" />
+<link rel="stylesheet" href="styles.css?v=5" />
 </head>
 <body>
 
@@ -162,15 +162,11 @@
       </label>
       <label class="field">
         <span>Category</span>
-        <input id="edit-category" type="text" list="cat-suggestions" maxlength="40" />
-        <datalist id="cat-suggestions">
-          <option value="Login"></option>
-          <option value="Banking"></option>
-          <option value="Email"></option>
-          <option value="Social"></option>
-          <option value="Work"></option>
-          <option value="Shopping"></option>
-        </datalist>
+        <button type="button" class="cat-select-btn" id="edit-category-btn">
+          <span id="edit-category-display">Login</span>
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M7 10l5 5 5-5z"/></svg>
+        </button>
+        <input type="hidden" id="edit-category" value="Login" />
       </label>
       <label class="field">
         <span>Notes</span>
@@ -186,6 +182,30 @@
         <button type="submit" class="btn primary">Save</button>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- ============== CATEGORY PICKER ============== -->
+<div class="modal" id="modal-cats" hidden>
+  <div class="modal-card narrow">
+    <header class="modal-head">
+      <h3>Category</h3>
+      <button class="icon-btn" data-close-modal="modal-cats" aria-label="Close">
+        <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M6 5l13 13-1.4 1.4L4.6 6.4z M19 5L6 18l-1.4-1.4L17.6 3.6z"/></svg>
+      </button>
+    </header>
+    <div id="cats-list" class="cats-list"></div>
+    <div id="cats-new-row" hidden>
+      <label class="field" style="margin-top:10px">
+        <span>New category name</span>
+        <input id="cats-new-input" type="text" maxlength="40" placeholder="e.g. Gaming, Travel, Crypto" autocomplete="off" />
+      </label>
+    </div>
+    <div class="modal-actions">
+      <div class="spacer"></div>
+      <button type="button" class="btn ghost" data-close-modal="modal-cats">Cancel</button>
+      <button type="button" class="btn primary" id="cats-confirm" hidden>Create</button>
+    </div>
   </div>
 </div>
 
@@ -322,9 +342,9 @@
 <!-- ============== TOAST ============== -->
 <div id="toast" class="toast" hidden></div>
 
-<script src="db.js?v=4"></script>
-<script src="crypto.js?v=4"></script>
-<script src="app.js?v=4"></script>
+<script src="db.js?v=5"></script>
+<script src="crypto.js?v=5"></script>
+<script src="app.js?v=5"></script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', async () => {

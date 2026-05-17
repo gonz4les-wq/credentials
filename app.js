@@ -458,6 +458,60 @@
     function iconEye(){ return `<svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M12 5c-7 0-11 7-11 7s4 7 11 7 11-7 11-7-4-7-11-7Zm0 12a5 5 0 1 1 0-10 5 5 0 0 1 0 10Zm0-2a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/></svg>`; }
   }
 
+  // ---------- Category picker ----------
+  const DEFAULT_CATS = ['Login','Banking','Email','Social','Work','Shopping'];
+  function allCategories(){
+    const set = new Set(DEFAULT_CATS);
+    State.vault.entries.forEach(e => {
+      const c = (e.category || 'Login').trim();
+      if (c) set.add(c);
+    });
+    return [...set].sort((a,b) => a.localeCompare(b));
+  }
+
+  function openCategoryPicker(current, onPick){
+    const cats = allCategories();
+    const listHTML = cats.map(c => `
+      <button type="button" class="cat-item${c === current ? ' active' : ''}" data-cat="${escapeHTML(c)}">
+        <span>${escapeHTML(c)}</span>
+        ${c === current ? '<span class="check">✓</span>' : ''}
+      </button>`).join('') +
+      `<button type="button" class="cat-item cat-new" data-cat="__new__">
+        <span>+ New category…</span>
+      </button>`;
+
+    $('cats-list').innerHTML = listHTML;
+    $('cats-new-row').hidden = true;
+    $('cats-new-input').value = '';
+    $('cats-confirm').hidden = true;
+
+    $('cats-list').onclick = (e) => {
+      const btn = e.target.closest('.cat-item');
+      if (!btn) return;
+      if (btn.dataset.cat === '__new__'){
+        $('cats-new-row').hidden = false;
+        $('cats-confirm').hidden = false;
+        setTimeout(() => $('cats-new-input').focus(), 60);
+      } else {
+        onPick(btn.dataset.cat);
+        closeModal('modal-cats');
+      }
+    };
+
+    $('cats-confirm').onclick = () => {
+      const name = $('cats-new-input').value.trim();
+      if (!name) { $('cats-new-input').focus(); return; }
+      onPick(name);
+      closeModal('modal-cats');
+    };
+
+    $('cats-new-input').onkeydown = (e) => {
+      if (e.key === 'Enter'){ e.preventDefault(); $('cats-confirm').click(); }
+    };
+
+    openModal('modal-cats');
+  }
+
   // ---------- Detail modal (mobile entry popup) ----------
   function openDetailModal(id){
     const e = State.vault.entries.find(x => x.id === id);
@@ -555,7 +609,9 @@
     $('edit-email').value = e?.email || '';
     $('edit-password').value = e?.password || '';
     $('edit-url').value = e?.url || '';
-    $('edit-category').value = e?.category || 'Login';
+    const cat = e?.category || 'Login';
+    $('edit-category').value = cat;
+    $('edit-category-display').textContent = cat;
     $('edit-notes').value = e?.notes || '';
     $('edit-favorite').checked = !!e?.favorite;
     $('edit-delete').hidden = !e;
@@ -825,6 +881,12 @@
       $('edit-password').value = pw;
       $('edit-password').dispatchEvent(new Event('input'));
     });
+    $('edit-category-btn').onclick = () => {
+      openCategoryPicker($('edit-category').value || 'Login', (chosen) => {
+        $('edit-category').value = chosen;
+        $('edit-category-display').textContent = chosen;
+      });
+    };
     $('form-edit').addEventListener('submit', async (ev) => {
       ev.preventDefault();
       const id = $('edit-id').value || Crypto.uuid();
