@@ -13,6 +13,9 @@
       ${letters ? `<span class="letters">${letters}</span>` : `<span class="letters-spacer"></span>`}
     </button>`;
   }
+  // Track the most recent PIN keydown handler so we can remove the previous one
+  // whenever a new PIN entry is mounted — otherwise old handlers pile up.
+  let _activePinKeyHandler = null;
   function createPinEntry(host, onComplete){
     host.innerHTML = `
       <div class="pin-dots" id="${host.id}-dots"></div>
@@ -57,6 +60,10 @@
       if (/^[0-9]$/.test(e.key)) { add(e.key); e.preventDefault(); }
       else if (e.key === 'Backspace') { back(); e.preventDefault(); }
     };
+    if (_activePinKeyHandler) {
+      document.removeEventListener('keydown', _activePinKeyHandler);
+    }
+    _activePinKeyHandler = keyHandler;
     document.addEventListener('keydown', keyHandler);
     return {
       clear(){ value = ''; busy = false; renderDots(); },
@@ -266,23 +273,43 @@
   });
 
   // Lock instantly when the app goes to the background (like real password managers).
+  // Also immediately hide any open sheet/modal so secrets don't peek through the
+  // iOS app-switcher snapshot or stay visible on the lock screen.
   let _bgAt = 0;
+  function closeAllModals(){
+    $$('.modal').forEach(m => {
+      if (m.hidden) return;
+      m.hidden = true;
+      m.classList.remove('closing');
+    });
+    // Also reset any "shown" password in the desktop detail panel
+    const pwView = $('pw-view');
+    if (pwView) pwView.textContent = '••••••••••••';
+  }
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden){ _bgAt = Date.now(); return; }
+    if (document.hidden){
+      _bgAt = Date.now();
+      if (State.key) closeAllModals();
+      return;
+    }
     if (!State.key) return;
     const gone = Date.now() - _bgAt;
     const threshold = (State.prefs.bgLockSec ?? 15) * 1000;
     if (gone >= threshold) lock();
     else resetIdle();
   });
-  window.addEventListener('pagehide', () => { if (State.key) _bgAt = Date.now(); });
+  window.addEventListener('pagehide', () => { if (State.key) { _bgAt = Date.now(); closeAllModals(); } });
 
   function lock(){
     State.key = null;
     State.vault = null;
     State.selectedId = null;
+    State.filter = { query: '', category: 'all' };
     clearTimeout(State.idleTimer);
     clearClipboardSoon(true);
+    // Close every open sheet/modal — otherwise the detail popup keeps showing
+    // a revealed password right on top of the lock screen.
+    closeAllModals();
     mountUnlock();
     showScreen('screen-lock');
   }
@@ -390,7 +417,11 @@
           || (e.url||'').toLowerCase().includes(q)
           || (e.notes||'').toLowerCase().includes(q);
       })
-      .sort((a,b) => (a.title||'').localeCompare(b.title||''));
+      .sort((a,b) => {
+        // On the "All" tab, pin favorites to the top.
+        if (c === 'all' && !!a.favorite !== !!b.favorite) return a.favorite ? -1 : 1;
+        return (a.title||'').localeCompare(b.title||'');
+      });
   }
 
   function renderList(){
@@ -406,10 +437,6 @@
     `).join('');
     $('entry-list').innerHTML = html || `<li class="entry" style="cursor:default;color:var(--text-dim)"><div class="meta"><div class="t">No entries</div><div class="u">Tap + to add one</div></div></li>`;
     wireFaviconFallback($('entry-list'));
-    // Stagger each entry's fade-in for a smooth list reveal
-    $$('.entry[data-id]', $('entry-list')).forEach((el, i) => {
-      el.style.animationDelay = Math.min(i, 12) * 28 + 'ms';
-    });
     $$('.entry[data-id]', $('entry-list')).forEach(el => el.addEventListener('click', () => {
       const id = el.dataset.id;
       if (window.innerWidth <= 820){
@@ -428,7 +455,7 @@
     const e = State.vault.entries.find(x => x.id === State.selectedId);
     if (!e){
       el.innerHTML = `<div class="empty">
-        <svg viewBox="0 0 24 24" width="60" height="60" opacity=".2"><path fill="currentColor" d="M12 1a6 6 0 0 0-6 6v3H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2h-1V7a6 6 0 0 0-6-6Zm-4 9V7a4 4 0 1 1 8 0v3H8Z"/></svg>
+        <svg viewBox="0 0 24 24" width="56" height="56" opacity=".2"><path fill="currentColor" d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5Zm-3 8V7a3 3 0 1 1 6 0v3H9Z"/></svg>
         <p>Select an entry, or add a new one.</p></div>`;
       return;
     }
@@ -740,14 +767,6 @@
     };
   }
 
-  async function wipeEverything(){
-    if (!confirm('This permanently deletes the entire vault on this device. Continue?')) return;
-    if (!confirm('Last chance — all saved entries will be lost. Continue?')) return;
-    try { await DB.clearAll(); } catch {}
-    try { localStorage.clear(); } catch {}
-    location.reload();
-  }
-
   // ---------- PIN flows ----------
   let setupPin = null, unlockPin = null, cpwPin = null, impPin = null;
 
@@ -933,19 +952,16 @@
       if (e.target === m) closeModal(m);
     }));
 
-    const lockWipe = $('wipe-btn');
-    if (lockWipe){ lockWipe.onclick = wipeEverything; }
-    const setupWipe = $('setup-wipe-btn');
-    if (setupWipe){ setupWipe.onclick = wipeEverything; }
-
     // Sidebar toggle (mobile)
     // Sidebar toggle (desktop only — kept for any layouts where it might surface)
     const tog = $('toggle-sidebar'); if (tog) tog.onclick = () => $('sidebar').classList.toggle('open');
 
-    // Search
+    // Search — debounced so each keystroke doesn't re-render the whole list.
+    let _searchTimer = null;
     $('search-input').addEventListener('input', (e) => {
       State.filter.query = e.target.value;
-      renderList();
+      clearTimeout(_searchTimer);
+      _searchTimer = setTimeout(renderList, 90);
     });
 
     // Add / lock / settings — desktop and mobile variants
@@ -1053,11 +1069,6 @@
       closeModal('modal-settings');
       mountChangePin();
       openModal('modal-changepw');
-    };
-    $('wipe-vault').onclick = async () => {
-      if (!confirm('Permanently wipe the entire vault on this device?')) return;
-      if (!confirm('Last chance. Continue?')) return;
-      await DB.clearAll(); location.reload();
     };
     $('export-btn').onclick = exportBackup;
     $('import-btn').onclick = () => $('import-file').click();
