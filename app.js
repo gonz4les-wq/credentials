@@ -234,6 +234,8 @@
     const favCount = State.vault.entries.filter(e => e.favorite).length;
     const all = State.vault.entries.length;
     const cats = categories();
+
+    // Sidebar (desktop)
     const html = [
       cat('all', 'All items', all),
       cat('__fav__', 'Favorites', favCount),
@@ -242,11 +244,25 @@
     ].join('');
     $('cats').innerHTML = html;
     $$('.cat', $('cats')).forEach(el => el.addEventListener('click', () => {
-      State.filter.category = el.dataset.cat;
-      renderList();
-      renderCategories();
+      setCategory(el.dataset.cat);
       $('sidebar').classList.remove('open');
     }));
+
+    // Chips (mobile)
+    const chipsHtml = [
+      chip('all', 'All', all),
+      ...(favCount > 0 ? [chip('__fav__', '★ Favorites', favCount)] : []),
+      ...cats.map(([n,c]) => chip(n, n, c)),
+    ].join('');
+    $('chips').innerHTML = chipsHtml;
+    $$('.chip', $('chips')).forEach(el => el.addEventListener('click', () => {
+      setCategory(el.dataset.cat);
+    }));
+
+    function chip(id, label, count){
+      const active = State.filter.category === id ? ' active' : '';
+      return `<button type="button" class="chip${active}" data-cat="${escapeHTML(id)}">${escapeHTML(label)}<span class="count">${count}</span></button>`;
+    }
 
     function cat(id, label, count){
       const active = State.filter.category === id ? ' active' : '';
@@ -254,6 +270,15 @@
         <span>${escapeHTML(label)}</span><span class="count">${count}</span>
       </div>`;
     }
+  }
+
+  function setCategory(c){
+    State.filter.category = c;
+    renderList();
+    renderCategories();
+    // After picking a category, scroll list back to top
+    const list = $('entry-list');
+    if (list) list.scrollTop = 0;
   }
 
   function filteredEntries(){
@@ -615,6 +640,10 @@
       const t = e.target.closest('[data-close-modal]');
       if (t) closeModal(t.dataset.closeModal);
     });
+    // Tap on modal backdrop closes the sheet (iOS-native feel)
+    $$('.modal').forEach(m => m.addEventListener('click', (e) => {
+      if (e.target === m) m.hidden = true;
+    }));
 
     const lockWipe = $('wipe-btn');
     if (lockWipe){ lockWipe.onclick = wipeEverything; }
@@ -622,7 +651,8 @@
     if (setupWipe){ setupWipe.onclick = wipeEverything; }
 
     // Sidebar toggle (mobile)
-    $('toggle-sidebar').onclick = () => $('sidebar').classList.toggle('open');
+    // Sidebar toggle (desktop only — kept for any layouts where it might surface)
+    const tog = $('toggle-sidebar'); if (tog) tog.onclick = () => $('sidebar').classList.toggle('open');
 
     // Search
     $('search-input').addEventListener('input', (e) => {
@@ -630,10 +660,13 @@
       renderList();
     });
 
-    // Add / lock buttons
+    // Add / lock / settings — desktop and mobile variants
     $('add-btn').onclick = () => openEdit(null);
+    const fab = $('fab-add'); if (fab) fab.onclick = () => openEdit(null);
     $('lock-now').onclick = lock;
+    const lockM = $('lock-now-mobile'); if (lockM) lockM.onclick = lock;
     $('open-settings').onclick = openSettings;
+    const setM = $('open-settings-mobile'); if (setM) setM.onclick = openSettings;
 
     // Edit form
     bindStrength('edit-password', 'edit-strength', null);
