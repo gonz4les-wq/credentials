@@ -1,14 +1,14 @@
 // sw.js — offline cache for the app shell. No vault data passes through here.
-const VERSION = 'v2.2.2';
+const VERSION = 'v2.1.0';
 const CACHE = `credentials-${VERSION}`;
 const SHELL = [
   './',
   './index.html',
-  './styles.css?v=14',
-  './crypto.js?v=14',
-  './db.js?v=14',
-  './app.js?v=14',
-  './manifest.webmanifest?v=14',
+  './styles.css?v=11',
+  './crypto.js?v=11',
+  './db.js?v=11',
+  './app.js?v=11',
+  './manifest.webmanifest?v=11',
   './icon.svg',
   './icon-192.png',
   './icon-512.png',

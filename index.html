@@ -12,7 +12,7 @@
 <meta name="format-detection" content="telephone=no" />
 <meta name="referrer" content="no-referrer" />
 <title>Credentials</title>
-<link rel="manifest" href="manifest.webmanifest?v=14" />
+<link rel="manifest" href="manifest.webmanifest?v=11" />
 <link rel="icon" href="icon.svg" type="image/svg+xml" />
 <link rel="apple-touch-icon" href="icon-192.png" />
 <link rel="apple-touch-icon" sizes="512x512" href="icon-512.png" />
@@ -25,7 +25,7 @@
     } catch(e){}
   })();
 </script>
-<link rel="stylesheet" href="styles.css?v=14" />
+<link rel="stylesheet" href="styles.css?v=11" />
 </head>
 <body>
 
@@ -347,25 +347,16 @@
 </div>
 
 <!-- ============== TOAST ============== -->
-<div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true" hidden></div>
+<div id="toast" class="toast" hidden></div>
 
-<script src="db.js?v=14"></script>
-<script src="crypto.js?v=14"></script>
-<script src="app.js?v=14"></script>
+<script src="db.js?v=11"></script>
+<script src="crypto.js?v=11"></script>
+<script src="app.js?v=11"></script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', async () => {
     try {
-      // updateViaCache:'none' bypasses the HTTP cache when checking for a
-      // new service worker — required on iOS PWAs, which otherwise can sit
-      // on a stale sw.js for ages and never pick up new releases.
-      const reg = await navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' });
-      // Force an update check on launch and again whenever the app
-      // becomes visible (e.g. switching back to the installed PWA).
-      reg.update().catch(() => {});
-      document.addEventListener('visibilitychange', () => {
-        if (!document.hidden) reg.update().catch(() => {});
-      });
+      const reg = await navigator.serviceWorker.register('sw.js');
       // When a new SW takes control, reload once so users get fresh assets.
       let reloaded = false;
       navigator.serviceWorker.addEventListener('controllerchange', () => {
