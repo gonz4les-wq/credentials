@@ -435,7 +435,15 @@
         </div>
       </li>
     `).join('');
-    $('entry-list').innerHTML = html || `<li class="entry" style="cursor:default;color:var(--text-dim)"><div class="meta"><div class="t">No entries</div><div class="u">Tap + to add one</div></div></li>`;
+    if (!html){
+      const q = State.filter.query.trim();
+      const empty = q
+        ? `<li class="entry empty-state" style="cursor:default"><div class="meta"><div class="t">No matches</div><div class="u">Nothing in your vault matches “${escapeHTML(q)}”.</div></div></li>`
+        : `<li class="entry empty-state" style="cursor:default"><div class="meta"><div class="t">Your vault is empty</div><div class="u">Tap the + button to add your first entry.</div></div></li>`;
+      $('entry-list').innerHTML = empty;
+    } else {
+      $('entry-list').innerHTML = html;
+    }
     wireFaviconFallback($('entry-list'));
     $$('.entry[data-id]', $('entry-list')).forEach(el => el.addEventListener('click', () => {
       const id = el.dataset.id;
@@ -951,6 +959,15 @@
     $$('.modal').forEach(m => m.addEventListener('click', (e) => {
       if (e.target === m) closeModal(m);
     }));
+    // Esc closes the topmost open modal — but only when no PIN entry is visible
+    // (the PIN component owns the keyboard while it's mounted).
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      const openModals = $$('.modal:not([hidden])');
+      if (!openModals.length) return;
+      const top = openModals[openModals.length - 1];
+      closeModal(top);
+    });
 
     // Sidebar toggle (mobile)
     // Sidebar toggle (desktop only — kept for any layouts where it might surface)
