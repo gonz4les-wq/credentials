@@ -12,7 +12,7 @@
 <meta name="format-detection" content="telephone=no" />
 <meta name="referrer" content="no-referrer" />
 <title>Credentials</title>
-<link rel="manifest" href="manifest.webmanifest?v=6" />
+<link rel="manifest" href="manifest.webmanifest?v=7" />
 <link rel="icon" href="icon.svg" type="image/svg+xml" />
 <link rel="apple-touch-icon" href="icon-192.png" />
 <link rel="apple-touch-icon" sizes="512x512" href="icon-512.png" />
@@ -25,7 +25,7 @@
     } catch(e){}
   })();
 </script>
-<link rel="stylesheet" href="styles.css?v=6" />
+<link rel="stylesheet" href="styles.css?v=7" />
 </head>
 <body>
 
@@ -41,9 +41,6 @@
     </div>
     <div id="lock-pin"></div>
     <div class="error" id="lock-error" hidden></div>
-    <div class="lock-foot">
-      <button class="link" id="wipe-btn" type="button">Forgot PIN — wipe vault</button>
-    </div>
   </div>
 </section>
 
@@ -358,9 +355,9 @@
 <!-- ============== TOAST ============== -->
 <div id="toast" class="toast" hidden></div>
 
-<script src="db.js?v=6"></script>
-<script src="crypto.js?v=6"></script>
-<script src="app.js?v=6"></script>
+<script src="db.js?v=7"></script>
+<script src="crypto.js?v=7"></script>
+<script src="app.js?v=7"></script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', async () => {

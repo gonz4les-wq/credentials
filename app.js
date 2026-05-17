@@ -257,6 +257,7 @@
     State.selectedId = null;
     clearTimeout(State.idleTimer);
     clearClipboardSoon(true);
+    cancelPwHide();
     mountUnlock();
     showScreen('screen-lock');
   }
@@ -458,6 +459,15 @@
     $('pw-toggle').onclick = () => {
       pwShown = !pwShown;
       $('pw-view').textContent = pwShown ? (e.password || '') : '••••••••••••';
+      if (pwShown){
+        armPwHide(() => {
+          pwShown = false;
+          const v = $('pw-view'); if (v) v.textContent = '••••••••••••';
+          toast('Password re-hidden');
+        });
+      } else {
+        cancelPwHide();
+      }
     };
     $('pw-copy').onclick = () => copyAndClear(e.password || '', 'Password copied');
     if ($('url-copy')) $('url-copy').onclick = () => copyAndClear(url, 'URL copied');
@@ -530,6 +540,18 @@
     openModal('modal-cats');
   }
 
+  // ---------- Password reveal auto-hide ----------
+  const PW_REVEAL_SECONDS = 15;
+  let _pwRevealTimer = null;
+  function armPwHide(hideFn){
+    clearTimeout(_pwRevealTimer);
+    _pwRevealTimer = setTimeout(() => { try { hideFn(); } catch {} }, PW_REVEAL_SECONDS * 1000);
+  }
+  function cancelPwHide(){
+    clearTimeout(_pwRevealTimer);
+    _pwRevealTimer = null;
+  }
+
   // ---------- Detail modal (mobile entry popup) ----------
   function openDetailModal(id){
     const e = State.vault.entries.find(x => x.id === id);
@@ -587,8 +609,20 @@
       else if (a === 'pw-toggle'){
         const pwEl = $('md-pw');
         const shown = pwEl.dataset.pwShown === '1';
-        pwEl.textContent = shown ? '••••••••••••' : (e.password || '');
-        pwEl.dataset.pwShown = shown ? '0' : '1';
+        if (shown){
+          pwEl.textContent = '••••••••••••';
+          pwEl.dataset.pwShown = '0';
+          cancelPwHide();
+        } else {
+          pwEl.textContent = e.password || '';
+          pwEl.dataset.pwShown = '1';
+          armPwHide(() => {
+            if (!$('md-pw') || $('modal-detail').hidden) return;
+            $('md-pw').textContent = '••••••••••••';
+            $('md-pw').dataset.pwShown = '0';
+            toast('Password re-hidden');
+          });
+        }
       }
     };
 
@@ -869,8 +903,10 @@
     });
     // Tap on modal backdrop closes the sheet (iOS-native feel)
     $$('.modal').forEach(m => m.addEventListener('click', (e) => {
-      if (e.target === m) m.hidden = true;
+      if (e.target === m){ m.hidden = true; cancelPwHide(); }
     }));
+    // Closing via the X / Cancel buttons also cancels the reveal timer
+    $$('[data-close-modal]').forEach(b => b.addEventListener('click', () => cancelPwHide()));
 
     const lockWipe = $('wipe-btn');
     if (lockWipe){ lockWipe.onclick = wipeEverything; }
