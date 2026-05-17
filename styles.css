@@ -35,6 +35,19 @@
   from { background: rgba(8,10,16,0); -webkit-backdrop-filter: blur(0); backdrop-filter: blur(0); }
   to   { background: rgba(8,10,16,.55); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
 }
+@keyframes modal-backdrop-out {
+  from { background: rgba(8,10,16,.55); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+  to   { background: rgba(8,10,16,0); -webkit-backdrop-filter: blur(0); backdrop-filter: blur(0); }
+}
+@keyframes card-scale-out {
+  to { transform: scale(0.95); opacity: 0; }
+}
+@keyframes card-slide-down {
+  to { transform: translateY(100%); }
+}
+@keyframes screen-out {
+  to { opacity: 0; transform: scale(1.015); }
+}
 @media (prefers-reduced-motion: reduce){
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
@@ -100,7 +113,6 @@
 *{box-sizing:border-box}
 html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font:14px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
   -webkit-font-smoothing:antialiased;height:100%;
-  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 body{overflow:hidden}
 button{font:inherit;color:inherit}
@@ -246,7 +258,13 @@ button{font:inherit;color:inherit}
   width:min(540px,100%);background:var(--bg-2);border:1px solid var(--line);border-radius:16px;
   padding:18px;box-shadow:var(--shadow);max-height:90vh;overflow:auto;
   animation:screen-in .24s cubic-bezier(.32,.72,0,1);
+  transform-origin:center;
 }
+
+/* Closing animations */
+.modal.closing{animation:modal-backdrop-out .24s ease-out forwards}
+.modal.closing .modal-card{animation:card-scale-out .24s cubic-bezier(.32,.72,0,1) forwards}
+.screen.exiting{animation:screen-out .26s cubic-bezier(.32,.72,0,1) forwards;pointer-events:none}
 .modal-card.narrow{width:min(420px,100%)}
 .modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
 .modal-head h3{margin:0;font-size:17px}
@@ -518,16 +536,28 @@ button{font:inherit;color:inherit}
   .content.show-detail ~ .fab,
   .main:has(.content.show-detail) .fab{display:none}
 
-  /* Modals slide up as bottom sheets */
+  /* Modals slide up as bottom sheets — capped so the card never reaches the status bar */
   .modal{align-items:flex-end;padding:0}
   .modal-card,.modal-card.narrow{
     width:100%;max-width:100%;
     border-radius:18px 18px 0 0;
-    max-height:92dvh;max-height:92vh;
-    padding:14px 16px max(22px, env(safe-area-inset-bottom));
-    animation:slideUp .26s cubic-bezier(.32,.72,0,1);
+    max-height:calc(100dvh - env(safe-area-inset-top) - 12px);
+    max-height:calc(100vh - env(safe-area-inset-top) - 12px);
+    padding:18px 16px max(22px, env(safe-area-inset-bottom));
+    animation:slideUp .28s cubic-bezier(.32,.72,0,1);
+    transform-origin:bottom center;
   }
   @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+  /* On mobile, close animation slides back down rather than scaling */
+  .modal.closing .modal-card,.modal.closing .modal-card.narrow{
+    animation:card-slide-down .28s cubic-bezier(.32,.72,0,1) forwards;
+  }
+
+  /* iOS-style grabber handle at top of bottom sheets */
+  .modal-card::before{
+    content:"";display:block;width:40px;height:5px;border-radius:99px;
+    background:var(--text-dim);opacity:.35;margin:-4px auto 12px;
+  }
 
   /* Inputs at 16px to prevent iOS zoom */
   .field input,.field textarea,.field select{font-size:16px}

@@ -111,6 +111,18 @@
     $$('.screen').forEach(s => s.classList.toggle('active', s.id === id));
   }
 
+  // Smoothly transition from the currently-active screen to another screen.
+  // Plays an exit animation on the current screen, then swaps. Returns a promise.
+  async function transitionToScreen(id){
+    const current = document.querySelector('.screen.active');
+    if (current && current.id !== id){
+      current.classList.add('exiting');
+      await sleep(260);
+      current.classList.remove('exiting');
+    }
+    showScreen(id);
+  }
+
   function toast(msg, ms=1800){
     const t = $('toast');
     t.textContent = msg;
@@ -119,8 +131,22 @@
     toast._t = setTimeout(() => t.hidden = true, ms);
   }
 
-  function openModal(id){ $(id).hidden = false; }
-  function closeModal(id){ $(id).hidden = true; }
+  const MODAL_CLOSE_MS = 240;
+  function openModal(id){
+    const m = $(id);
+    if (!m) return;
+    m.classList.remove('closing');
+    m.hidden = false;
+  }
+  function closeModal(id){
+    const m = typeof id === 'string' ? $(id) : id;
+    if (!m || m.hidden) return;
+    m.classList.add('closing');
+    setTimeout(() => {
+      m.hidden = true;
+      m.classList.remove('closing');
+    }, MODAL_CLOSE_MS);
+  }
 
   function escapeHTML(s){
     return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -759,7 +785,8 @@
         State.key = await Crypto.deriveKey(pin, State.salt, State.iterations);
         State.vault = { version: 1, entries: [] };
         await saveVault();
-        enterApp();
+        await sleep(180);
+        await enterAppAnimated();
       } catch (e) {
         err.textContent = 'Could not create vault: ' + (e.message || e);
         err.hidden = false;
@@ -782,7 +809,9 @@
         const vault = await Crypto.decryptJSON(key, enc.iv, enc.ct);
         State.key = key;
         State.vault = vault;
-        enterApp();
+        // brief hold so user sees all dots filled, then smoothly fade out lock screen
+        await sleep(180);
+        await enterAppAnimated();
       } catch (e) {
         err.textContent = 'Wrong PIN.';
         err.hidden = false;
@@ -899,9 +928,9 @@
       const t = e.target.closest('[data-close-modal]');
       if (t) closeModal(t.dataset.closeModal);
     });
-    // Tap on modal backdrop closes the sheet (iOS-native feel)
+    // Tap on modal backdrop closes the sheet (iOS-native feel, with animation)
     $$('.modal').forEach(m => m.addEventListener('click', (e) => {
-      if (e.target === m) m.hidden = true;
+      if (e.target === m) closeModal(m);
     }));
 
     const lockWipe = $('wipe-btn');
@@ -1047,6 +1076,15 @@
 
   function enterApp(){
     showScreen('screen-app');
+    renderCategories();
+    renderList();
+    renderDetail();
+    resetIdle();
+    $('search-input').value = '';
+  }
+
+  async function enterAppAnimated(){
+    await transitionToScreen('screen-app');
     renderCategories();
     renderList();
     renderDetail();
