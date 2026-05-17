@@ -78,7 +78,7 @@
     vault: null,        // { version, entries: [...] }
     selectedId: null,
     filter: { query: '', category: 'all' },
-    prefs: { autoLockMin: 5, clipClearSec: 20, theme: 'auto' },
+    prefs: { autoLockMin: 5, clipClearSec: 20, theme: 'auto', userCats: [] },
     idleTimer: null,
     clipTimer: null,
     lastClip: '',
@@ -257,7 +257,6 @@
     State.selectedId = null;
     clearTimeout(State.idleTimer);
     clearClipboardSoon(true);
-    cancelPwHide();
     mountUnlock();
     showScreen('screen-lock');
   }
@@ -381,6 +380,10 @@
     `).join('');
     $('entry-list').innerHTML = html || `<li class="entry" style="cursor:default;color:var(--text-dim)"><div class="meta"><div class="t">No entries</div><div class="u">Tap + to add one</div></div></li>`;
     wireFaviconFallback($('entry-list'));
+    // Stagger each entry's fade-in for a smooth list reveal
+    $$('.entry[data-id]', $('entry-list')).forEach((el, i) => {
+      el.style.animationDelay = Math.min(i, 12) * 28 + 'ms';
+    });
     $$('.entry[data-id]', $('entry-list')).forEach(el => el.addEventListener('click', () => {
       const id = el.dataset.id;
       if (window.innerWidth <= 820){
@@ -452,6 +455,10 @@
     $('d-fav').onclick = async () => {
       e.favorite = !e.favorite; e.updatedAt = new Date().toISOString();
       await saveVault(); renderList(); renderDetail(); renderCategories();
+      requestAnimationFrame(() => {
+        const star = document.querySelector('.detail .star');
+        if (star){ star.classList.remove('pop'); void star.offsetWidth; star.classList.add('pop'); }
+      });
     };
     if ($('back-to-list')) $('back-to-list').onclick = () => document.querySelector('.content').classList.remove('show-detail');
 
@@ -459,15 +466,6 @@
     $('pw-toggle').onclick = () => {
       pwShown = !pwShown;
       $('pw-view').textContent = pwShown ? (e.password || '') : '••••••••••••';
-      if (pwShown){
-        armPwHide(() => {
-          pwShown = false;
-          const v = $('pw-view'); if (v) v.textContent = '••••••••••••';
-          toast('Password re-hidden');
-        });
-      } else {
-        cancelPwHide();
-      }
     };
     $('pw-copy').onclick = () => copyAndClear(e.password || '', 'Password copied');
     if ($('url-copy')) $('url-copy').onclick = () => copyAndClear(url, 'URL copied');
@@ -490,11 +488,28 @@
   const DEFAULT_CATS = ['Login','Banking','Email','Social','Work','Shopping'];
   function allCategories(){
     const set = new Set(DEFAULT_CATS);
+    // Categories already in use on entries
     State.vault.entries.forEach(e => {
       const c = (e.category || 'Login').trim();
       if (c) set.add(c);
     });
+    // User-created categories saved in prefs (persist even if no entry uses them yet)
+    (State.prefs.userCats || []).forEach(c => { if (c && c.trim()) set.add(c.trim()); });
     return [...set].sort((a,b) => a.localeCompare(b));
+  }
+
+  async function registerUserCategory(name){
+    const trimmed = (name || '').trim();
+    if (!trimmed) return;
+    // Skip if it duplicates an existing one (case-insensitive)
+    const existing = allCategories().find(c => c.toLowerCase() === trimmed.toLowerCase());
+    if (existing) return existing;
+    if (!Array.isArray(State.prefs.userCats)) State.prefs.userCats = [];
+    if (!State.prefs.userCats.some(c => c.toLowerCase() === trimmed.toLowerCase())){
+      State.prefs.userCats.push(trimmed);
+      try { await persistPrefs(); } catch {}
+    }
+    return trimmed;
   }
 
   function openCategoryPicker(current, onPick){
@@ -526,9 +541,11 @@
       }
     };
 
-    $('cats-confirm').onclick = () => {
-      const name = $('cats-new-input').value.trim();
-      if (!name) { $('cats-new-input').focus(); return; }
+    $('cats-confirm').onclick = async () => {
+      const raw = $('cats-new-input').value.trim();
+      if (!raw) { $('cats-new-input').focus(); return; }
+      // Persist into State.prefs.userCats so it's available for ALL future entries
+      const name = await registerUserCategory(raw) || raw;
       onPick(name);
       closeModal('modal-cats');
     };
@@ -538,18 +555,6 @@
     };
 
     openModal('modal-cats');
-  }
-
-  // ---------- Password reveal auto-hide ----------
-  const PW_REVEAL_SECONDS = 15;
-  let _pwRevealTimer = null;
-  function armPwHide(hideFn){
-    clearTimeout(_pwRevealTimer);
-    _pwRevealTimer = setTimeout(() => { try { hideFn(); } catch {} }, PW_REVEAL_SECONDS * 1000);
-  }
-  function cancelPwHide(){
-    clearTimeout(_pwRevealTimer);
-    _pwRevealTimer = null;
   }
 
   // ---------- Detail modal (mobile entry popup) ----------
@@ -609,20 +614,8 @@
       else if (a === 'pw-toggle'){
         const pwEl = $('md-pw');
         const shown = pwEl.dataset.pwShown === '1';
-        if (shown){
-          pwEl.textContent = '••••••••••••';
-          pwEl.dataset.pwShown = '0';
-          cancelPwHide();
-        } else {
-          pwEl.textContent = e.password || '';
-          pwEl.dataset.pwShown = '1';
-          armPwHide(() => {
-            if (!$('md-pw') || $('modal-detail').hidden) return;
-            $('md-pw').textContent = '••••••••••••';
-            $('md-pw').dataset.pwShown = '0';
-            toast('Password re-hidden');
-          });
-        }
+        pwEl.textContent = shown ? '••••••••••••' : (e.password || '');
+        pwEl.dataset.pwShown = shown ? '0' : '1';
       }
     };
 
@@ -633,6 +626,11 @@
       await saveVault();
       renderList(); renderCategories();
       openDetailModal(id); // re-render with updated state
+      // Pop the star in the just-rerendered modal
+      requestAnimationFrame(() => {
+        const star = document.querySelector('#md-head .star');
+        if (star){ star.classList.remove('pop'); void star.offsetWidth; star.classList.add('pop'); }
+      });
     };
 
     wireFaviconFallback($('md-head'));
@@ -903,10 +901,8 @@
     });
     // Tap on modal backdrop closes the sheet (iOS-native feel)
     $$('.modal').forEach(m => m.addEventListener('click', (e) => {
-      if (e.target === m){ m.hidden = true; cancelPwHide(); }
+      if (e.target === m) m.hidden = true;
     }));
-    // Closing via the X / Cancel buttons also cancels the reveal timer
-    $$('[data-close-modal]').forEach(b => b.addEventListener('click', () => cancelPwHide()));
 
     const lockWipe = $('wipe-btn');
     if (lockWipe){ lockWipe.onclick = wipeEverything; }
