@@ -117,7 +117,7 @@
     const current = document.querySelector('.screen.active');
     if (current && current.id !== id){
       current.classList.add('exiting');
-      await sleep(260);
+      await sleep(360);
       current.classList.remove('exiting');
     }
     showScreen(id);
@@ -131,7 +131,7 @@
     toast._t = setTimeout(() => t.hidden = true, ms);
   }
 
-  const MODAL_CLOSE_MS = 240;
+  const MODAL_CLOSE_MS = 360;
   function openModal(id){
     const m = $(id);
     if (!m) return;
