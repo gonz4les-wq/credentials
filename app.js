@@ -4,15 +4,25 @@
 
   // ---------- PIN entry component (iOS-style numpad) ----------
   const PIN_LENGTH = 6;
+  const PIN_LETTERS = { 1:'', 2:'ABC', 3:'DEF', 4:'GHI', 5:'JKL', 6:'MNO', 7:'PQRS', 8:'TUV', 9:'WXYZ', 0:'' };
   function haptic(ms = 8){ try { navigator.vibrate && navigator.vibrate(ms); } catch {} }
+  function pinKeyHTML(n){
+    const letters = PIN_LETTERS[n];
+    return `<button type="button" class="pin-key" data-d="${n}">
+      <span class="digit">${n}</span>
+      ${letters ? `<span class="letters">${letters}</span>` : `<span class="letters-spacer"></span>`}
+    </button>`;
+  }
   function createPinEntry(host, onComplete){
     host.innerHTML = `
       <div class="pin-dots" id="${host.id}-dots"></div>
       <div class="pin-pad">
-        ${[1,2,3,4,5,6,7,8,9].map(n => `<button type="button" class="pin-key" data-d="${n}">${n}</button>`).join('')}
+        ${[1,2,3,4,5,6,7,8,9].map(pinKeyHTML).join('')}
         <button type="button" class="pin-key empty" tabindex="-1"></button>
-        <button type="button" class="pin-key" data-d="0">0</button>
-        <button type="button" class="pin-key del" data-act="del" aria-label="Delete">⌫</button>
+        ${pinKeyHTML(0)}
+        <button type="button" class="pin-key del" data-act="del" aria-label="Delete">
+          <svg viewBox="0 0 24 24" width="26" height="26"><path fill="currentColor" d="M22 3H7c-.69 0-1.23.35-1.59.88L0 12l5.41 8.11c.36.53.9.89 1.59.89h15c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-3 13.59L17.59 18 14 14.41 10.41 18 9 16.59 12.59 13 9 9.41 10.41 8 14 11.59 17.59 8 19 9.41 15.41 13 19 16.59z"/></svg>
+        </button>
       </div>`;
     const dotsEl = host.querySelector('.pin-dots');
     let value = '';
@@ -113,6 +123,47 @@
   function avatarStyle(title){
     const h = hueFor(title);
     return `background:linear-gradient(135deg, hsl(${h} 70% 55%), hsl(${(h+40)%360} 70% 45%))`;
+  }
+
+  function domainOf(url){
+    if (!url) return null;
+    try {
+      const u = new URL(/^[a-z]+:\/\//i.test(url) ? url : 'https://' + url);
+      return u.hostname.replace(/^www\./, '');
+    } catch { return null; }
+  }
+  function faviconURL(url){
+    const d = domainOf(url);
+    return d ? `https://icons.duckduckgo.com/ip3/${d}.ico` : null;
+  }
+  function avatarHTML(entry){
+    const fav = faviconURL(entry.url);
+    const i = escapeHTML(initials(entry.title));
+    const t = escapeHTML(entry.title || '?');
+    if (fav){
+      return `<div class="avatar avatar-img" data-title="${t}" data-init="${i}">
+        <img src="${escapeHTML(fav)}" alt="" referrerpolicy="no-referrer" loading="lazy" />
+      </div>`;
+    }
+    return `<div class="avatar" style="${avatarStyle(entry.title)}">${i}</div>`;
+  }
+  // Replace failed favicon images with the initials avatar
+  function wireFaviconFallback(root){
+    (root || document).querySelectorAll('.avatar-img img').forEach(img => {
+      img.addEventListener('error', () => {
+        const av = img.parentElement;
+        if (!av) return;
+        const title = av.getAttribute('data-title') || '?';
+        av.classList.remove('avatar-img');
+        av.removeAttribute('style');
+        av.style.cssText = avatarStyle(title);
+        av.innerHTML = av.getAttribute('data-init') || '?';
+      }, { once: true });
+    });
+  }
+  function normalizeURL(url){
+    if (!url) return '';
+    return /^[a-z]+:\/\//i.test(url) ? url : 'https://' + url;
   }
 
   function setStrengthMeter(meterEl, score){
@@ -291,6 +342,7 @@
         if (!q) return true;
         return (e.title||'').toLowerCase().includes(q)
           || (e.username||'').toLowerCase().includes(q)
+          || (e.email||'').toLowerCase().includes(q)
           || (e.url||'').toLowerCase().includes(q)
           || (e.notes||'').toLowerCase().includes(q);
       })
@@ -301,19 +353,25 @@
     const list = filteredEntries();
     const html = list.map(e => `
       <li class="entry${e.id === State.selectedId ? ' active' : ''}" data-id="${e.id}">
-        <div class="avatar" style="${avatarStyle(e.title)}">${escapeHTML(initials(e.title))}</div>
+        ${avatarHTML(e)}
         <div class="meta">
           <div class="t">${escapeHTML(e.title || 'Untitled')} ${e.favorite ? '<span class="star">★</span>' : ''}</div>
-          <div class="u">${escapeHTML(e.username || e.url || '—')}</div>
+          <div class="u">${escapeHTML(e.username || e.email || e.url || '—')}</div>
         </div>
       </li>
     `).join('');
-    $('entry-list').innerHTML = html || `<li class="entry" style="cursor:default;color:var(--text-dim)"><div class="meta"><div class="t">No entries</div><div class="u">Press “New” to add one</div></div></li>`;
+    $('entry-list').innerHTML = html || `<li class="entry" style="cursor:default;color:var(--text-dim)"><div class="meta"><div class="t">No entries</div><div class="u">Tap + to add one</div></div></li>`;
+    wireFaviconFallback($('entry-list'));
     $$('.entry[data-id]', $('entry-list')).forEach(el => el.addEventListener('click', () => {
-      State.selectedId = el.dataset.id;
-      renderList();
-      renderDetail();
-      document.querySelector('.content').classList.add('show-detail');
+      const id = el.dataset.id;
+      if (window.innerWidth <= 820){
+        openDetailModal(id);
+      } else {
+        State.selectedId = id;
+        renderList();
+        renderDetail();
+        document.querySelector('.content').classList.add('show-detail');
+      }
     }));
   }
 
@@ -332,7 +390,7 @@
     el.innerHTML = `
       <button class="btn ghost only-mobile" id="back-to-list" style="align-self:flex-start">← Back</button>
       <div class="detail-head">
-        <div class="avatar" style="${avatarStyle(e.title)}">${escapeHTML(initials(e.title))}</div>
+        ${avatarHTML(e)}
         <div>
           <h2>${escapeHTML(e.title || 'Untitled')} ${e.favorite ? '<span class="star">★</span>' : ''}</h2>
           <div class="sub">${escapeHTML(e.category || 'Login')} · updated ${escapeHTML(updated)}</div>
@@ -345,6 +403,8 @@
       </div>
 
       ${row('Username', escapeHTML(e.username || ''), e.username ? `<button class="icon-btn" data-copy-user title="Copy">${iconCopy()}</button>` : '')}
+
+      ${row('Email', escapeHTML(e.email || ''), e.email ? `<button class="icon-btn" data-copy-email title="Copy">${iconCopy()}</button>` : '')}
 
       <div class="row">
         <div class="lbl">Password</div>
@@ -359,7 +419,7 @@
 
       ${url ? `<div class="row">
         <div class="lbl">Website</div>
-        <div class="val"><a href="${escapeHTML(url)}" target="_blank" rel="noopener noreferrer">${escapeHTML(urlPretty)}</a>
+        <div class="val"><a href="${escapeHTML(normalizeURL(url))}" target="_blank" rel="noopener noreferrer">${escapeHTML(urlPretty)}</a>
           <div class="controls"><button class="icon-btn" id="url-copy" title="Copy">${iconCopy()}</button></div>
         </div>
       </div>` : ''}
@@ -385,6 +445,9 @@
     if ($('url-copy')) $('url-copy').onclick = () => copyAndClear(url, 'URL copied');
     const cu = el.querySelector('[data-copy-user]');
     if (cu) cu.onclick = () => copyAndClear(e.username || '', 'Username copied');
+    const ce = el.querySelector('[data-copy-email]');
+    if (ce) ce.onclick = () => copyAndClear(e.email || '', 'Email copied');
+    wireFaviconFallback(el);
 
     function row(lbl, valHTML, controls){
       return `<div class="row"><div class="lbl">${lbl}</div>
@@ -395,6 +458,93 @@
     function iconEye(){ return `<svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M12 5c-7 0-11 7-11 7s4 7 11 7 11-7 11-7-4-7-11-7Zm0 12a5 5 0 1 1 0-10 5 5 0 0 1 0 10Zm0-2a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/></svg>`; }
   }
 
+  // ---------- Detail modal (mobile entry popup) ----------
+  function openDetailModal(id){
+    const e = State.vault.entries.find(x => x.id === id);
+    if (!e) return;
+    const url = e.url || '';
+    const urlPretty = url.replace(/^https?:\/\//,'').replace(/\/$/,'');
+    const updated = e.updatedAt ? new Date(e.updatedAt).toLocaleDateString(undefined, { year:'numeric', month:'short', day:'numeric' }) : '';
+    const ico = (path) => `<svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="${path}"/></svg>`;
+    const copyIco = 'M16 1H4a2 2 0 0 0-2 2v14h2V3h12V1Zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Zm0 16H8V7h11v14Z';
+    const eyeIco = 'M12 5c-7 0-11 7-11 7s4 7 11 7 11-7 11-7-4-7-11-7Zm0 12a5 5 0 1 1 0-10 5 5 0 0 1 0 10Zm0-2a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z';
+
+    $('md-head').innerHTML = `
+      ${avatarHTML(e)}
+      <div class="tt">
+        <h3>${escapeHTML(e.title || 'Untitled')} ${e.favorite ? '<span class="star">★</span>' : ''}</h3>
+        <div class="sub">${escapeHTML(e.category || 'Login')} · updated ${escapeHTML(updated)}</div>
+      </div>`;
+
+    const rows = [];
+    rows.push(row('Username', e.username, e.username ? [{ act:'copy-user', icon:copyIco, label:'Copy' }] : []));
+    rows.push(row('Email', e.email, e.email ? [{ act:'copy-email', icon:copyIco, label:'Copy' }] : []));
+    rows.push(`<div class="detail-row">
+      <div class="lbl">Password</div>
+      <div class="v-wrap">
+        <span class="v" id="md-pw" data-pw-shown="0">${e.password ? '••••••••••••' : '<span class="v muted">(empty)</span>'}</span>
+        <div class="ctrls">
+          ${e.password ? `<button class="icon-btn" data-act="pw-toggle" aria-label="Show">${ico(eyeIco)}</button>
+          <button class="icon-btn" data-act="copy-pw" aria-label="Copy">${ico(copyIco)}</button>` : ''}
+        </div>
+      </div></div>`);
+    if (url) rows.push(`<div class="detail-row">
+      <div class="lbl">Website</div>
+      <div class="v-wrap">
+        <a href="${escapeHTML(normalizeURL(url))}" target="_blank" rel="noopener noreferrer">${escapeHTML(urlPretty)}</a>
+        <div class="ctrls"><button class="icon-btn" data-act="copy-url" aria-label="Copy">${ico(copyIco)}</button></div>
+      </div></div>`);
+    if (e.notes) rows.push(`<div class="detail-row">
+      <div class="lbl">Notes</div>
+      <div class="notes">${escapeHTML(e.notes)}</div></div>`);
+
+    $('md-rows').innerHTML = rows.join('');
+
+    // Favorite button label
+    $('md-fav').textContent = e.favorite ? '★ Unfavorite' : '☆ Favorite';
+
+    // Wire actions
+    $('md-rows').onclick = (ev) => {
+      const b = ev.target.closest('[data-act]');
+      if (!b) return;
+      const a = b.dataset.act;
+      if (a === 'copy-user') copyAndClear(e.username || '', 'Username copied');
+      else if (a === 'copy-email') copyAndClear(e.email || '', 'Email copied');
+      else if (a === 'copy-pw') copyAndClear(e.password || '', 'Password copied');
+      else if (a === 'copy-url') copyAndClear(normalizeURL(url), 'URL copied');
+      else if (a === 'pw-toggle'){
+        const pwEl = $('md-pw');
+        const shown = pwEl.dataset.pwShown === '1';
+        pwEl.textContent = shown ? '••••••••••••' : (e.password || '');
+        pwEl.dataset.pwShown = shown ? '0' : '1';
+      }
+    };
+
+    $('md-edit').onclick = () => { closeModal('modal-detail'); openEdit(id); };
+    $('md-delete').onclick = () => { closeModal('modal-detail'); deleteEntry(id); };
+    $('md-fav').onclick = async () => {
+      e.favorite = !e.favorite; e.updatedAt = new Date().toISOString();
+      await saveVault();
+      renderList(); renderCategories();
+      openDetailModal(id); // re-render with updated state
+    };
+
+    wireFaviconFallback($('md-head'));
+    openModal('modal-detail');
+
+    function row(lbl, value, ctrls){
+      const isEmpty = !value;
+      const valHTML = isEmpty
+        ? `<span class="v muted plain">(empty)</span>`
+        : `<span class="v plain">${escapeHTML(value)}</span>`;
+      const ctrlsHTML = (ctrls || []).map(c => `<button class="icon-btn" data-act="${c.act}" aria-label="${c.label}">${ico(c.icon)}</button>`).join('');
+      return `<div class="detail-row">
+        <div class="lbl">${lbl}</div>
+        <div class="v-wrap">${valHTML}<div class="ctrls">${ctrlsHTML}</div></div>
+      </div>`;
+    }
+  }
+
   // ---------- CRUD ----------
   function openEdit(id){
     const e = id ? State.vault.entries.find(x => x.id === id) : null;
@@ -402,6 +552,7 @@
     $('edit-id').value = e?.id || '';
     $('edit-title-input').value = e?.title || '';
     $('edit-username').value = e?.username || '';
+    $('edit-email').value = e?.email || '';
     $('edit-password').value = e?.password || '';
     $('edit-url').value = e?.url || '';
     $('edit-category').value = e?.category || 'Login';
@@ -683,6 +834,7 @@
         id,
         title: $('edit-title-input').value.trim(),
         username: $('edit-username').value,
+        email: $('edit-email').value.trim(),
         password: $('edit-password').value,
         url: $('edit-url').value.trim(),
         category: ($('edit-category').value || 'Login').trim(),

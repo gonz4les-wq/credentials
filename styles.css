@@ -136,8 +136,10 @@ button{font:inherit;color:inherit}
 .entry.active{background:rgba(79,124,255,.10);border-left:3px solid var(--accent);padding-left:11px}
 .entry .avatar{
   width:36px;height:36px;border-radius:10px;background:var(--bg-3);display:flex;align-items:center;justify-content:center;
-  color:#fff;font-weight:700;font-size:14px;flex:0 0 36px;
+  color:#fff;font-weight:700;font-size:14px;flex:0 0 36px;overflow:hidden;
 }
+.avatar.avatar-img{background:#fff;padding:4px}
+.avatar.avatar-img img{width:100%;height:100%;object-fit:contain;display:block}
 .entry .meta{min-width:0;flex:1}
 .entry .t{font-weight:600;color:var(--text);text-overflow:ellipsis;overflow:hidden;white-space:nowrap}
 .entry .u{font-size:12px;color:var(--text-dim);text-overflow:ellipsis;overflow:hidden;white-space:nowrap}
@@ -174,6 +176,33 @@ button{font:inherit;color:inherit}
 .sect{margin:14px 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.4px;color:var(--text-dim)}
 .row{display:flex;gap:8px;flex-wrap:wrap}
 
+/* ===== Detail modal (entry popup) ===== */
+.detail-modal-head{display:flex;align-items:center;gap:14px;flex:1}
+.detail-modal-head .avatar{width:48px;height:48px;border-radius:12px;font-size:18px;flex:0 0 48px}
+.detail-modal-head .tt{min-width:0;flex:1}
+.detail-modal-head h3{margin:0;font-size:18px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.detail-modal-head .sub{font-size:12px;color:var(--text-dim);margin-top:2px}
+.detail-rows{margin-top:8px;display:flex;flex-direction:column}
+.detail-row{
+  display:flex;flex-direction:column;gap:4px;padding:12px 4px;
+  border-bottom:1px solid var(--line);
+}
+.detail-row:last-of-type{border-bottom:0}
+.detail-row .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-dim)}
+.detail-row .v-wrap{display:flex;align-items:center;gap:8px;min-height:28px}
+.detail-row .v-wrap .v{flex:1;font-size:15px;word-break:break-word;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.detail-row .v-wrap .v.plain{font-family:inherit}
+.detail-row .v-wrap .v.muted{color:var(--text-dim);font-style:italic;font-family:inherit}
+.detail-row .v-wrap a{color:var(--accent-2);text-decoration:none;flex:1;word-break:break-word}
+.detail-row .v-wrap a:hover{text-decoration:underline}
+.detail-row .notes{white-space:pre-wrap;font-family:inherit;font-size:14px;color:var(--text)}
+.detail-row .ctrls{display:flex;gap:4px;flex-shrink:0}
+.detail-row .ctrls .icon-btn{width:34px;height:34px;border-radius:8px;background:var(--bg-3)}
+.detail-row .ctrls .icon-btn:hover{background:#222a3b}
+@media (prefers-color-scheme: light){
+  .detail-row .ctrls .icon-btn:hover{background:#e3e8f0}
+}
+
 .gen-output{
   display:flex;gap:6px;align-items:center;background:var(--bg-3);border:1px solid var(--line);
   border-radius:10px;padding:10px 12px;margin-bottom:6px;
@@ -207,7 +236,7 @@ button{font:inherit;color:inherit}
   border-radius:22px;padding:28px 22px 22px;box-shadow:var(--shadow);
   display:flex;flex-direction:column;align-items:center;gap:16px;
 }
-.pin-dots{display:flex;gap:14px;margin:4px 0 6px;height:18px;align-items:center}
+.pin-dots{display:flex;gap:22px;margin:4px 0 18px;height:18px;align-items:center}
 .pin-dots.shake{animation:shake .4s}
 @keyframes shake{
   0%,100%{transform:translateX(0)}
@@ -218,30 +247,42 @@ button{font:inherit;color:inherit}
 }
 .pin-dot{
   width:14px;height:14px;border-radius:50%;
-  border:1.5px solid var(--text-dim);
-  background:transparent;transition:background .12s, transform .12s, border-color .12s;
+  border:1.5px solid var(--text);
+  background:transparent;transition:background .22s ease;
 }
-.pin-dot.filled{background:var(--text);border-color:var(--text);transform:scale(1.05)}
+.pin-dot.filled{background:var(--text)}
 .pin-pad{
-  display:grid;grid-template-columns:repeat(3, 76px);gap:14px;
-  margin-top:6px;
+  display:grid;grid-template-columns:repeat(3, 80px);
+  gap:14px 22px;margin-top:10px;
 }
 .pin-key{
-  width:76px;height:76px;border-radius:50%;
-  background:var(--bg-3);border:1px solid var(--line);
-  color:var(--text);font-size:28px;font-weight:300;
-  cursor:pointer;display:flex;align-items:center;justify-content:center;
-  -webkit-tap-highlight-color:transparent;user-select:none;
-  transition:transform .08s ease, background .15s;
+  width:80px;height:80px;border-radius:50%;
+  background:rgba(255,255,255,0.10);border:0;color:var(--text);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;
+  transition:background .18s ease;
 }
-.pin-key:hover{background:#222a3b}
-.pin-key:active{transform:scale(.92);background:var(--accent);color:#fff;border-color:transparent}
-.pin-key[disabled],.pin-key.empty{visibility:hidden;pointer-events:none}
-.pin-key.del{font-size:22px;background:transparent;border-color:transparent}
-.pin-key.del:hover{background:var(--bg-3)}
+.pin-key:hover{background:rgba(255,255,255,0.14)}
+.pin-key:active{background:rgba(255,255,255,0.32);transition:background 0s}
+.pin-key .digit{font-size:34px;font-weight:300;line-height:1;letter-spacing:.5px}
+.pin-key .letters{font-size:10px;font-weight:600;letter-spacing:2px;color:var(--text-dim);line-height:1}
+.pin-key .letters-spacer{height:11px;display:block}
+.pin-key.empty{visibility:hidden;pointer-events:none;background:transparent}
+.pin-key.del{background:transparent;color:var(--text)}
+.pin-key.del:hover{background:rgba(255,255,255,0.10)}
+.pin-key.del:active{background:rgba(255,255,255,0.22)}
+@media (prefers-color-scheme: light){
+  .pin-key{background:rgba(0,0,0,0.06)}
+  .pin-key:hover{background:rgba(0,0,0,0.10)}
+  .pin-key:active{background:rgba(0,0,0,0.18)}
+  .pin-key.del{background:transparent}
+  .pin-key.del:hover{background:rgba(0,0,0,0.06)}
+  .pin-key.del:active{background:rgba(0,0,0,0.14)}
+}
 @media (max-width: 380px){
-  .pin-pad{grid-template-columns:repeat(3, 68px);gap:12px}
-  .pin-key{width:68px;height:68px;font-size:26px}
+  .pin-pad{grid-template-columns:repeat(3, 72px);gap:12px 18px}
+  .pin-key{width:72px;height:72px}
+  .pin-key .digit{font-size:30px}
 }
 
 /* ===== Chips (mobile category filter) ===== */

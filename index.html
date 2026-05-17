@@ -12,11 +12,11 @@
 <meta name="format-detection" content="telephone=no" />
 <meta name="referrer" content="no-referrer" />
 <title>Credentials</title>
-<link rel="manifest" href="manifest.webmanifest?v=3" />
+<link rel="manifest" href="manifest.webmanifest?v=4" />
 <link rel="icon" href="icon.svg" type="image/svg+xml" />
 <link rel="apple-touch-icon" href="icon-192.png" />
 <link rel="apple-touch-icon" sizes="512x512" href="icon-512.png" />
-<link rel="stylesheet" href="styles.css?v=3" />
+<link rel="stylesheet" href="styles.css?v=4" />
 </head>
 <body>
 
@@ -140,8 +140,12 @@
         <input id="edit-title-input" type="text" required maxlength="120" />
       </label>
       <label class="field">
-        <span>Username / email</span>
+        <span>Username</span>
         <input id="edit-username" type="text" autocomplete="off" maxlength="200" />
+      </label>
+      <label class="field">
+        <span>Email</span>
+        <input id="edit-email" type="text" autocomplete="off" maxlength="200" inputmode="email" spellcheck="false" autocapitalize="off" />
       </label>
       <label class="field">
         <span>Password</span>
@@ -153,8 +157,8 @@
         <div class="strength" id="edit-strength"><div></div></div>
       </label>
       <label class="field">
-        <span>Website / URL</span>
-        <input id="edit-url" type="url" placeholder="https://example.com" autocomplete="off" />
+        <span>Website <small style="color:var(--text-dim);text-transform:none;letter-spacing:0">(optional)</small></span>
+        <input id="edit-url" type="text" placeholder="example.com" autocomplete="off" inputmode="url" spellcheck="false" autocapitalize="off" />
       </label>
       <label class="field">
         <span>Category</span>
@@ -182,6 +186,25 @@
         <button type="submit" class="btn primary">Save</button>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- ============== DETAIL MODAL (entry popup) ============== -->
+<div class="modal" id="modal-detail" hidden>
+  <div class="modal-card">
+    <header class="modal-head">
+      <div class="detail-modal-head" id="md-head"></div>
+      <button class="icon-btn" data-close-modal="modal-detail" aria-label="Close">
+        <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M6 5l13 13-1.4 1.4L4.6 6.4z M19 5L6 18l-1.4-1.4L17.6 3.6z"/></svg>
+      </button>
+    </header>
+    <div class="detail-rows" id="md-rows"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn danger ghost" id="md-delete">Delete</button>
+      <div class="spacer"></div>
+      <button type="button" class="btn ghost" id="md-fav">Favorite</button>
+      <button type="button" class="btn primary" id="md-edit">Edit</button>
+    </div>
   </div>
 </div>
 
@@ -299,9 +322,9 @@
 <!-- ============== TOAST ============== -->
 <div id="toast" class="toast" hidden></div>
 
-<script src="db.js?v=3"></script>
-<script src="crypto.js?v=3"></script>
-<script src="app.js?v=3"></script>
+<script src="db.js?v=4"></script>
+<script src="crypto.js?v=4"></script>
+<script src="app.js?v=4"></script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', async () => {
