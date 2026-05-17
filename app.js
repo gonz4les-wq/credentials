@@ -431,6 +431,9 @@
   }
 
   function renderList(){
+    // Bail out if the vault is locked — a debounced search keystroke can
+    // fire renderList after lock() nulled State.vault.
+    if (!State.vault) return;
     const list = filteredEntries();
     const html = list.map(e => `
       <li class="entry${e.id === State.selectedId ? ' active' : ''}" data-id="${e.id}">
@@ -593,7 +596,9 @@
       if (btn.dataset.cat === '__new__'){
         $('cats-new-row').hidden = false;
         $('cats-confirm').hidden = false;
-        setTimeout(() => $('cats-new-input').focus(), 60);
+        // Focus synchronously inside the user-gesture handler so iOS opens
+        // the soft keyboard. A deferred setTimeout focus does not.
+        $('cats-new-input').focus();
       } else {
         onPick(btn.dataset.cat);
         closeModal('modal-cats');
@@ -726,7 +731,13 @@
     $('edit-delete').hidden = !e;
     setStrengthMeter($('edit-strength'), Crypto.strengthScore($('edit-password').value));
     openModal('modal-edit');
-    setTimeout(() => $('edit-title-input').focus(), 50);
+    // Only auto-focus on desktop. On iOS, focus from a deferred timer can't
+    // open the soft keyboard (focus must happen synchronously inside a user
+    // gesture), so auto-focusing just shows the focus ring without a usable
+    // keyboard — confusing. Let the user tap the field themselves.
+    if (window.innerWidth > 820) {
+      setTimeout(() => $('edit-title-input').focus(), 50);
+    }
   }
 
   async function deleteEntry(id){

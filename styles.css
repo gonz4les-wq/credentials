@@ -495,9 +495,11 @@ button{font:inherit;color:inherit}
 
 /* ===== Responsive ===== */
 @media (max-width: 820px){
-  /* Lock everything down — only specific containers may scroll */
-  html,body{height:100%;overflow:hidden;overscroll-behavior:none;-webkit-tap-highlight-color:transparent}
-  body{position:fixed;width:100%;left:0;top:0;right:0;bottom:0}
+  /* Lock everything down — only specific containers may scroll.
+     NOTE: do NOT use position:fixed on body — in iOS standalone PWAs that
+     prevents the soft keyboard from popping up when an input is tapped.
+     overscroll-behavior:none is enough to stop rubber-band scrolling. */
+  html,body{height:100%;overflow:hidden;overscroll-behavior:none;-webkit-tap-highlight-color:transparent;margin:0}
   /* Order matters: dvh must come AFTER vh so it overrides on supporting browsers */
   #screen-app{height:100vh;height:100dvh;flex-direction:column}
 
