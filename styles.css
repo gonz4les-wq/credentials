@@ -1,5 +1,6 @@
 /* ===== Theme ===== */
 :root{
+  /* Dark (default) */
   --bg: #0f1115;
   --bg-2: #161a22;
   --bg-3: #1d2230;
@@ -14,12 +15,44 @@
   --shadow: 0 10px 30px rgba(0,0,0,.35);
   --radius: 12px;
   --radius-sm: 8px;
+  /* PIN keypad surface tones */
+  --key-bg: rgba(255,255,255,0.18);
+  --key-bg-hover: rgba(255,255,255,0.24);
+  --key-bg-active: rgba(255,255,255,0.38);
+  --key-bg-del-hover: rgba(255,255,255,0.14);
+  --key-bg-del-active: rgba(255,255,255,0.28);
+  --key-letters: rgba(255,255,255,0.7);
+  --hover-bg: #222a3b;
 }
+
+/* Light theme (applied either by system preference in auto mode, or explicit data-theme="light") */
+:root[data-theme="light"]{
+  --bg:#f4f6fb; --bg-2:#ffffff; --bg-3:#eef1f7; --line:#dde2ec;
+  --text:#0c1220; --text-dim:#5b6478;
+  --shadow: 0 8px 24px rgba(20,30,60,.10);
+  --key-bg: rgba(0,0,0,0.07);
+  --key-bg-hover: rgba(0,0,0,0.12);
+  --key-bg-active: rgba(0,0,0,0.20);
+  --key-bg-del-hover: rgba(0,0,0,0.07);
+  --key-bg-del-active: rgba(0,0,0,0.16);
+  --key-letters: rgba(0,0,0,0.55);
+  --hover-bg: #e3e8f0;
+}
+
+/* Auto mode — follow system */
 @media (prefers-color-scheme: light){
-  :root{
+  :root:not([data-theme]),
+  :root[data-theme="auto"]{
     --bg:#f4f6fb; --bg-2:#ffffff; --bg-3:#eef1f7; --line:#dde2ec;
     --text:#0c1220; --text-dim:#5b6478;
     --shadow: 0 8px 24px rgba(20,30,60,.10);
+    --key-bg: rgba(0,0,0,0.07);
+    --key-bg-hover: rgba(0,0,0,0.12);
+    --key-bg-active: rgba(0,0,0,0.20);
+    --key-bg-del-hover: rgba(0,0,0,0.07);
+    --key-bg-del-active: rgba(0,0,0,0.16);
+    --key-letters: rgba(0,0,0,0.55);
+    --hover-bg: #e3e8f0;
   }
 }
 
@@ -75,7 +108,7 @@ button{font:inherit;color:inherit}
   padding:9px 14px;border-radius:10px;cursor:pointer;font-weight:500;
   transition:transform .06s ease, background .2s, border-color .2s;
 }
-.btn:hover{background:#222a3b}
+.btn:hover{background:var(--hover-bg)}
 .btn:active{transform:translateY(1px)}
 .btn.primary{background:var(--accent);border-color:transparent;color:#fff}
 .btn.primary:hover{background:var(--accent-2)}
@@ -176,6 +209,21 @@ button{font:inherit;color:inherit}
 .sect{margin:14px 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.4px;color:var(--text-dim)}
 .row{display:flex;gap:8px;flex-wrap:wrap}
 
+/* ===== Segmented control (theme picker) ===== */
+.seg{
+  display:inline-flex;background:var(--bg-3);border:1px solid var(--line);
+  border-radius:10px;padding:3px;gap:2px;
+}
+.seg-btn{
+  background:transparent;border:0;color:var(--text-dim);
+  padding:8px 18px;border-radius:7px;font:inherit;
+  cursor:pointer;-webkit-tap-highlight-color:transparent;
+  font-weight:500;transition:background .15s, color .15s;
+  min-height:36px;
+}
+.seg-btn.active{background:var(--accent);color:#fff}
+.seg-btn:hover:not(.active){color:var(--text)}
+
 /* ===== Category select + picker ===== */
 .cat-select-btn{
   display:flex;align-items:center;justify-content:space-between;
@@ -184,11 +232,8 @@ button{font:inherit;color:inherit}
   padding:10px 12px;font:inherit;cursor:pointer;
   -webkit-tap-highlight-color:transparent;
 }
-.cat-select-btn:hover{background:#222a3b}
+.cat-select-btn:hover{background:var(--hover-bg)}
 .cat-select-btn svg{color:var(--text-dim);flex:0 0 18px}
-@media (prefers-color-scheme: light){
-  .cat-select-btn:hover{background:#e3e8f0}
-}
 
 .cats-list{
   max-height:50vh;overflow-y:auto;
@@ -205,7 +250,7 @@ button{font:inherit;color:inherit}
   -webkit-tap-highlight-color:transparent;
   transition:background .14s;
 }
-.cat-item:hover{background:#222a3b}
+.cat-item:hover{background:var(--hover-bg)}
 .cat-item.active{background:rgba(79,124,255,.18);border-color:var(--accent);color:var(--text)}
 .cat-item .check{color:var(--accent-2);font-weight:700}
 .cat-item.cat-new{
@@ -214,9 +259,6 @@ button{font:inherit;color:inherit}
   margin-top:6px;
 }
 .cat-item.cat-new:hover{background:rgba(79,124,255,.10)}
-@media (prefers-color-scheme: light){
-  .cat-item:hover{background:#e3e8f0}
-}
 
 /* ===== Detail modal (entry popup) ===== */
 .detail-modal-head{display:flex;align-items:center;gap:14px;flex:1}
@@ -240,10 +282,7 @@ button{font:inherit;color:inherit}
 .detail-row .notes{white-space:pre-wrap;font-family:inherit;font-size:14px;color:var(--text)}
 .detail-row .ctrls{display:flex;gap:4px;flex-shrink:0}
 .detail-row .ctrls .icon-btn{width:34px;height:34px;border-radius:8px;background:var(--bg-3)}
-.detail-row .ctrls .icon-btn:hover{background:#222a3b}
-@media (prefers-color-scheme: light){
-  .detail-row .ctrls .icon-btn:hover{background:#e3e8f0}
-}
+.detail-row .ctrls .icon-btn:hover{background:var(--hover-bg)}
 
 .gen-output{
   display:flex;gap:6px;align-items:center;background:var(--bg-3);border:1px solid var(--line);
@@ -278,7 +317,7 @@ button{font:inherit;color:inherit}
   padding:0;box-shadow:none;
   display:flex;flex-direction:column;align-items:center;gap:10px;
 }
-.pin-dots{display:flex;gap:24px;margin:6px 0 22px;height:14px;align-items:center}
+.pin-dots{display:flex;gap:24px;margin:6px 0 22px;height:14px;align-items:center;justify-content:center;width:100%}
 .pin-dots.shake{animation:shake .4s}
 @keyframes shake{
   0%,100%{transform:translateX(0)}
@@ -303,15 +342,15 @@ button{font:inherit;color:inherit}
 }
 .pin-key{
   width:78px;height:78px;border-radius:50%;
-  background:rgba(255,255,255,0.18);border:0;color:var(--text);
+  background:var(--key-bg);border:0;color:var(--text);
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   gap:3px;padding:0;
   cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;
   transition:background .18s ease;
   font-feature-settings:"tnum";
 }
-.pin-key:hover{background:rgba(255,255,255,0.24)}
-.pin-key:active{background:rgba(255,255,255,0.38);transition:background 0s}
+.pin-key:hover{background:var(--key-bg-hover)}
+.pin-key:active{background:var(--key-bg-active);transition:background 0s}
 .pin-key .digit{
   font-size:32px;font-weight:400;line-height:1;
   letter-spacing:0;
@@ -319,25 +358,14 @@ button{font:inherit;color:inherit}
 }
 .pin-key .letters{
   font-size:10px;font-weight:600;letter-spacing:2.5px;
-  color:rgba(255,255,255,0.7);line-height:1;
+  color:var(--key-letters);line-height:1;
   margin-top:1px;
 }
 .pin-key .letters-spacer{height:11px;display:block}
 .pin-key.empty{visibility:hidden;pointer-events:none;background:transparent}
-.pin-key.del{
-  background:transparent;color:var(--text);
-}
-.pin-key.del:hover{background:rgba(255,255,255,0.14)}
-.pin-key.del:active{background:rgba(255,255,255,0.28)}
-@media (prefers-color-scheme: light){
-  .pin-key{background:rgba(0,0,0,0.07)}
-  .pin-key:hover{background:rgba(0,0,0,0.12)}
-  .pin-key:active{background:rgba(0,0,0,0.20)}
-  .pin-key .letters{color:rgba(0,0,0,0.55)}
-  .pin-key.del{background:transparent}
-  .pin-key.del:hover{background:rgba(0,0,0,0.07)}
-  .pin-key.del:active{background:rgba(0,0,0,0.16)}
-}
+.pin-key.del{background:transparent;color:var(--text)}
+.pin-key.del:hover{background:var(--key-bg-del-hover)}
+.pin-key.del:active{background:var(--key-bg-del-active)}
 @media (max-width: 380px){
   .pin-pad{grid-template-columns:repeat(3, 72px);column-gap:20px;row-gap:12px}
   .pin-key{width:72px;height:72px}

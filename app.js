@@ -78,11 +78,29 @@
     vault: null,        // { version, entries: [...] }
     selectedId: null,
     filter: { query: '', category: 'all' },
-    prefs: { autoLockMin: 5, clipClearSec: 20 },
+    prefs: { autoLockMin: 5, clipClearSec: 20, theme: 'auto' },
     idleTimer: null,
     clipTimer: null,
     lastClip: '',
   };
+
+  // ---------- Theme ----------
+  function applyTheme(t){
+    if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+    else document.documentElement.removeAttribute('data-theme');
+    try { localStorage.setItem('cred-theme', t || 'auto'); } catch {}
+    State.prefs.theme = t || 'auto';
+    // Reflect active state in any rendered segmented control
+    document.querySelectorAll('[data-theme-pick]').forEach(b => {
+      b.classList.toggle('active', b.dataset.themePick === (t || 'auto'));
+    });
+  }
+  // Initialize from localStorage (pre-paint script already set data-theme; this syncs State)
+  (function bootTheme(){
+    let saved = null;
+    try { saved = localStorage.getItem('cred-theme'); } catch {}
+    State.prefs.theme = saved || 'auto';
+  })();
 
   // ---------- Helpers ----------
   const $  = (id) => document.getElementById(id);
@@ -642,6 +660,8 @@
       mountUnlock();
       showScreen('screen-lock');
     }
+    // Apply the theme we know about (localStorage already applied pre-paint, this re-syncs)
+    applyTheme(State.prefs.theme || 'auto');
     wireUI();
     maybeShowIOSHint();
     try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch {}
@@ -950,6 +970,14 @@
     window._openGenerator = openGenerator;
 
     // Settings
+    // Theme picker
+    document.querySelectorAll('[data-theme-pick]').forEach(b => {
+      b.addEventListener('click', async () => {
+        applyTheme(b.dataset.themePick);
+        try { await persistPrefs(); } catch {}
+      });
+    });
+
     $('set-autolock').addEventListener('change', async () => {
       const v = Math.max(1, Math.min(120, parseInt($('set-autolock').value, 10) || 5));
       State.prefs.autoLockMin = v; $('set-autolock').value = v;
@@ -979,6 +1007,9 @@
   function openSettings(){
     $('set-autolock').value = State.prefs.autoLockMin;
     $('set-clipclear').value = State.prefs.clipClearSec;
+    document.querySelectorAll('[data-theme-pick]').forEach(b => {
+      b.classList.toggle('active', b.dataset.themePick === (State.prefs.theme || 'auto'));
+    });
     openModal('modal-settings');
   }
 
